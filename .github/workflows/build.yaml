@@ -1,0 +1,41 @@
+on: [push, workflow_dispatch]
+
+name: build
+
+jobs:
+
+  ko-publish:
+    name: Release ko artifact
+    runs-on: ubuntu-latest
+
+    permissions:
+      id-token: write
+      packages: write
+      contents: read
+
+    steps:
+      - uses: actions/setup-go@v4
+        with:
+          go-version: '1.20.x'
+
+      - uses: actions/checkout@v3
+
+      - uses: ko-build/setup-ko@v0.6
+      - run: ko build
+
+      - name: Login to the GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Publish
+        run: KO_DOCKER_REPO=ghcr.io/endorlabs/hello-sign ko publish --bare github.com/endorlabs/hello-sign
+
+      # - name: Sign with Endor Labs
+      #   uses: endorlabs/github-action@v1.1.1
+      #   with:
+      #      command: sign
+      #      image-name: ghcr.io/endorlabs/hello-sign
+      #      namespace: "example"
